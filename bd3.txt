@@ -1,0 +1,792 @@
+CREATE TABLE "users" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "email" varchar(255) UNIQUE NOT NULL,
+  "password_hash" varchar(255) NOT NULL,
+  "first_name" varchar(100) NOT NULL,
+  "last_name" varchar(100) NOT NULL,
+  "phone" varchar(20),
+  "profession" varchar(100),
+  "user_type" varchar(20) NOT NULL,
+  "status" varchar(20) NOT NULL DEFAULT 'PENDING',
+  "company_id" uuid,
+  "profile_id" uuid,
+  "code_ad365" varchar(80),
+  "last_login" timestamp,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp,
+  "created_by" uuid
+);
+
+CREATE TABLE "permissions" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "name" varchar(100) UNIQUE NOT NULL,
+  "description" text,
+  "module" varchar(50),
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "profiles" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "name" varchar(100) UNIQUE NOT NULL,
+  "description" text,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp,
+  "created_by" uuid
+);
+
+CREATE TABLE "profile_permissions" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "profile_id" uuid NOT NULL,
+  "permission_id" uuid NOT NULL,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "user_files" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "user_id" uuid NOT NULL,
+  "filename" varchar(255) NOT NULL,
+  "file_path" varchar(255) NOT NULL,
+  "mime_type" varchar(100) NOT NULL,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "companies" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "rut" varchar(20) UNIQUE NOT NULL,
+  "business_name" varchar(255) NOT NULL,
+  "address" text NOT NULL,
+  "city" varchar(100) NOT NULL,
+  "region" varchar(100) NOT NULL,
+  "postal_code" varchar(20),
+  "business_activity" varchar(255),
+  "industry" varchar(255),
+  "email" varchar(255) NOT NULL,
+  "phone" varchar(20) NOT NULL,
+  "representative_rut" varchar(20),
+  "representative_name" varchar(255),
+  "representative_phone" varchar(20),
+  "company_type" varchar(20) NOT NULL,
+  "mandante_id" uuid,
+  "erp_client_code" varchar(50),
+  "credit_enabled" boolean NOT NULL DEFAULT false,
+  "credit_days" integer DEFAULT 0,
+  "credit_status" varchar(50) DEFAULT 'PENDING',
+  "blocked" boolean NOT NULL DEFAULT false,
+  "block_reason" text,
+  "tax_email" varchar(255),
+  "registration_status" varchar(20) NOT NULL DEFAULT 'PENDING',
+  "approval_date" timestamp,
+  "approved_by" uuid,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "company_addresses" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "company_id" uuid NOT NULL,
+  "address" text NOT NULL,
+  "city" varchar(100) NOT NULL,
+  "region" varchar(100) NOT NULL,
+  "postal_code" varchar(20),
+  "is_default" boolean NOT NULL DEFAULT false,
+  "description" varchar(255),
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "contracts" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "contract_number" varchar(50) UNIQUE,
+  "name" varchar(255),
+  "mandante_id" uuid NOT NULL,
+  "start_date" date,
+  "end_date" date,
+  "status" varchar(20) NOT NULL DEFAULT 'ACTIVE',
+  "payment_terms_days" integer DEFAULT 0,
+  "requires_po_number" boolean NOT NULL DEFAULT false,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp,
+  "created_by" uuid
+);
+
+CREATE TABLE "sites" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "code_cx" varchar(20) UNIQUE,
+  "name" varchar(255) NOT NULL,
+  "address" text NOT NULL,
+  "city" varchar(100) NOT NULL,
+  "region" varchar(100) NOT NULL,
+  "requires_offline_sync" boolean NOT NULL DEFAULT false,
+  "active" boolean NOT NULL DEFAULT true,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "services" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "code" varchar(20) UNIQUE NOT NULL,
+  "sprs_service_code" varchar(50),
+  "name" varchar(255) NOT NULL,
+  "description" text,
+  "price" decimal(10,2) NOT NULL,
+  "service_type" varchar(50) NOT NULL,
+  "active" boolean NOT NULL DEFAULT true,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "contract_services" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "contract_id" uuid NOT NULL,
+  "service_id" uuid NOT NULL,
+  "contract_specific_price" decimal(10,2),
+  "is_active_in_contract" boolean NOT NULL DEFAULT true,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "purchase_authorizations" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "contractor_id" uuid NOT NULL,
+  "site_id" uuid NOT NULL,
+  "contract_id" uuid NOT NULL,
+  "requested_by" uuid NOT NULL,
+  "approved_by" uuid,
+  "status" varchar(20) NOT NULL DEFAULT 'PENDING',
+  "start_date" date,
+  "end_date" date,
+  "reason" varchar(255),
+  "notes" text,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "purchases" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "purchase_code" varchar(20) UNIQUE NOT NULL,
+  "contractor_id" uuid NOT NULL,
+  "billed_to_company_id" uuid NOT NULL,
+  "contract_id" uuid NOT NULL,
+  "site_id" uuid NOT NULL,
+  "authorization_id" uuid,
+  "created_by" uuid NOT NULL,
+  "status" varchar(20) NOT NULL DEFAULT 'PENDING_APPROVAL',
+  "purchase_type" varchar(20) NOT NULL,
+  "payment_status" varchar(20) DEFAULT 'PENDING',
+  "total_amount" decimal(12,2) NOT NULL,
+  "purchase_date" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "requires_po_number" boolean NOT NULL DEFAULT false,
+  "po_type" varchar(20),
+  "po_number" varchar(100),
+  "po_date" date,
+  "po_document_path" varchar(255),
+  "description" text,
+  "notes" text,
+  "sprs_order_id" varchar(100),
+  "billing_address_id" uuid,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "purchase_details" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "purchase_id" uuid NOT NULL,
+  "service_id" uuid NOT NULL,
+  "quantity" integer NOT NULL,
+  "unit_price" decimal(10,2) NOT NULL,
+  "subtotal" decimal(12,2) NOT NULL,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "tickets" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "public_code" varchar(50) UNIQUE NOT NULL,
+  "purchase_detail_id" uuid NOT NULL,
+  "service_id" uuid NOT NULL,
+  "site_id" uuid NOT NULL,
+  "qr_code_hash" varchar(255) UNIQUE NOT NULL,
+  "qr_code_payload" text,
+  "barcode_hash" varchar(255) UNIQUE,
+  "barcode_payload" text,
+  "status" varchar(20) NOT NULL DEFAULT 'GENERATED',
+  "issue_date" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "valid_from" date NOT NULL,
+  "expiration_date" date NOT NULL,
+  "consumption_date" timestamp,
+  "consumed_by_device_id" uuid,
+  "consumed_at_site_id" uuid,
+  "is_blocked" boolean NOT NULL DEFAULT false,
+  "blocked_reason" text,
+  "blocked_at" timestamp,
+  "is_revalidated" boolean NOT NULL DEFAULT false,
+  "revalidated_from_ticket_id" uuid,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "batches_tickets" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "quantity" integer NOT NULL,
+  "upload_date" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "uploaded_by" uuid,
+  "service_id" uuid,
+  "site_id" uuid,
+  "processing_status" varchar(20) DEFAULT 'PENDING',
+  "processing_details" jsonb,
+  "notes" text,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp,
+  "file_path" varchar(255)
+);
+
+CREATE TABLE "invoices" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "invoice_number" varchar(50) UNIQUE NOT NULL,
+  "billed_to_company_id" uuid NOT NULL,
+  "purchase_id" uuid NOT NULL,
+  "issue_date" date NOT NULL,
+  "due_date" date NOT NULL,
+  "total_amount" decimal(12,2) NOT NULL,
+  "tax_amount" decimal(12,2) NOT NULL,
+  "net_amount" decimal(12,2) NOT NULL,
+  "sii_status" varchar(30) NOT NULL DEFAULT 'ISSUED',
+  "payment_status" varchar(20) NOT NULL DEFAULT 'PENDING',
+  "payment_date" date,
+  "payment_reference" varchar(100),
+  "payment_method" varchar(50),
+  "sprs_invoice_ref" varchar(100),
+  "erp_invoice_ref" varchar(100),
+  "pdf_path" varchar(255),
+  "xml_path" varchar(255),
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "ticket_consumptions" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "ticket_id" uuid NOT NULL,
+  "site_id" uuid NOT NULL,
+  "device_id" uuid,
+  "consumption_date" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "sync_status" varchar(20) NOT NULL DEFAULT 'SYNCED',
+  "sync_date" timestamp,
+  "consumption_data" jsonb,
+  "created_by" uuid,
+  "error_message" text,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "devices" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "code" varchar(50) UNIQUE NOT NULL,
+  "name" varchar(100) NOT NULL,
+  "type" varchar(20) NOT NULL,
+  "site_id" uuid NOT NULL,
+  "last_sync" timestamp,
+  "status" varchar(20) NOT NULL DEFAULT 'ACTIVE',
+  "registered_by" uuid,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "ticket_revalidation_requests" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "ticket_id" uuid NOT NULL,
+  "requested_by" uuid NOT NULL,
+  "approved_by" uuid,
+  "status" varchar(20) NOT NULL DEFAULT 'PENDING',
+  "new_expiration_date" date,
+  "reason" text NOT NULL,
+  "notes" text,
+  "new_ticket_id" uuid,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "ticket_refund_requests" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "ticket_id" uuid NOT NULL,
+  "requested_by" uuid NOT NULL,
+  "approved_by" uuid,
+  "status" varchar(20) NOT NULL DEFAULT 'PENDING',
+  "reason" text NOT NULL,
+  "notes" text,
+  "credit_note_id" uuid,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "credit_notes" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "credit_note_number" varchar(50) UNIQUE NOT NULL,
+  "invoice_id" uuid NOT NULL,
+  "billed_to_company_id" uuid NOT NULL,
+  "issue_date" date NOT NULL,
+  "total_amount" decimal(12,2) NOT NULL,
+  "tax_amount" decimal(12,2) NOT NULL,
+  "net_amount" decimal(12,2) NOT NULL,
+  "status" varchar(20) NOT NULL DEFAULT 'ISSUED',
+  "sii_status" varchar(30),
+  "sprs_credit_note_ref" varchar(100),
+  "erp_credit_note_ref" varchar(100),
+  "pdf_path" varchar(255),
+  "xml_path" varchar(255),
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "notifications" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "user_id" uuid,
+  "recipient_email" varchar(255),
+  "title" varchar(255) NOT NULL,
+  "message" text NOT NULL,
+  "type" varchar(50) NOT NULL,
+  "status" varchar(20) NOT NULL DEFAULT 'PENDING',
+  "sent_at" timestamp,
+  "read_at" timestamp,
+  "related_entity_type" varchar(50),
+  "related_entity_id" uuid,
+  "data" jsonb,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "payment_transactions" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "external_transaction_id" varchar(100) UNIQUE NOT NULL,
+  "purchase_id" uuid NOT NULL,
+  "payment_gateway" varchar(50) NOT NULL,
+  "amount" decimal(12,2) NOT NULL,
+  "currency" varchar(3) NOT NULL DEFAULT 'CLP',
+  "status" varchar(50) NOT NULL,
+  "transaction_date" timestamp NOT NULL,
+  "description" text,
+  "gateway_response" jsonb,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "registration_documents" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "company_id" uuid NOT NULL,
+  "document_type" varchar(50) NOT NULL,
+  "file_path" varchar(255) NOT NULL,
+  "uploaded_by" uuid NOT NULL,
+  "status" varchar(20) NOT NULL DEFAULT 'PENDING_REVIEW',
+  "reviewed_by" uuid,
+  "review_date" timestamp,
+  "notes" text,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "audit_logs" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "user_id" uuid,
+  "action" varchar(100) NOT NULL,
+  "entity_type" varchar(50) NOT NULL,
+  "entity_id" uuid,
+  "old_values" jsonb,
+  "new_values" jsonb,
+  "ip_address" varchar(45),
+  "user_agent" text,
+  "status" varchar(20) DEFAULT 'SUCCESS',
+  "failure_reason" text,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "system_configurations" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "key" varchar(100) UNIQUE NOT NULL,
+  "value" text NOT NULL,
+  "description" text,
+  "is_editable_by_admin" boolean DEFAULT true,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_by" uuid
+);
+
+CREATE UNIQUE INDEX ON "profile_permissions" ("profile_id", "permission_id");
+
+CREATE UNIQUE INDEX ON "contract_services" ("contract_id", "service_id");
+
+COMMENT ON COLUMN "users"."user_type" IS 'SODEXO_ADMIN, SODEXO_FINANZAS, SODEXO_OPERACION, MANDANTE_ADMIN, CONTRATISTA_ADMIN, CONTRATISTA_USER';
+
+COMMENT ON COLUMN "users"."status" IS 'PENDING, ACTIVE, INACTIVE, BLOCKED';
+
+COMMENT ON COLUMN "users"."company_id" IS 'FK to companies table. Null for Sodexo users';
+
+COMMENT ON COLUMN "users"."profile_id" IS 'FK to profiles table';
+
+COMMENT ON COLUMN "users"."code_ad365" IS 'Object ID from Azure AD/Entra ID';
+
+COMMENT ON COLUMN "users"."created_by" IS 'FK to users table (who created this user)';
+
+COMMENT ON COLUMN "permissions"."name" IS 'e.g., create_purchase, approve_company, manage_users';
+
+COMMENT ON COLUMN "permissions"."module" IS 'Helps group permissions, e.g., Purchases, Companies, Users';
+
+COMMENT ON COLUMN "profiles"."name" IS 'e.g., Administrador Sodexo Global, Analista Credito, Admin Contratista, Usuario Contratista';
+
+COMMENT ON COLUMN "profiles"."created_by" IS 'FK to users table';
+
+COMMENT ON COLUMN "profile_permissions"."profile_id" IS 'FK to profiles table';
+
+COMMENT ON COLUMN "profile_permissions"."permission_id" IS 'FK to permissions table';
+
+COMMENT ON COLUMN "companies"."email" IS 'Email principal de la empresa';
+
+COMMENT ON COLUMN "companies"."company_type" IS 'MANDANTE, CONTRATISTA';
+
+COMMENT ON COLUMN "companies"."mandante_id" IS 'FK to companies.id (Self-reference). NOT NULL if company_type is CONTRATISTA';
+
+COMMENT ON COLUMN "companies"."erp_client_code" IS 'Código de cliente en ERP (SAP/AX)';
+
+COMMENT ON COLUMN "companies"."credit_enabled" IS 'Indica si tiene crédito DIRECTO (generalmente solo mandantes via contrato)';
+
+COMMENT ON COLUMN "companies"."credit_days" IS 'Días de crédito directo (si aplica)';
+
+COMMENT ON COLUMN "companies"."credit_status" IS 'PENDING, ACTIVE, BLOCKED, REJECTED';
+
+COMMENT ON COLUMN "companies"."blocked" IS 'Bloqueo operativo dentro de SVA';
+
+COMMENT ON COLUMN "companies"."tax_email" IS 'Email para recepción DTE (puede ser diferente al principal)';
+
+COMMENT ON COLUMN "companies"."registration_status" IS 'PENDING, APPROVED, REJECTED';
+
+COMMENT ON COLUMN "companies"."approved_by" IS 'FK to users table (Sodexo user who approved)';
+
+COMMENT ON COLUMN "contracts"."contract_number" IS 'Numero o código identificador del contrato';
+
+COMMENT ON COLUMN "contracts"."name" IS 'Nombre descriptivo del contrato';
+
+COMMENT ON COLUMN "contracts"."mandante_id" IS 'FK to companies table (company_type MANDANTE)';
+
+COMMENT ON COLUMN "contracts"."status" IS 'DRAFT, ACTIVE, EXPIRED, TERMINATED';
+
+COMMENT ON COLUMN "contracts"."payment_terms_days" IS 'Días de crédito para el Mandante bajo este contrato';
+
+COMMENT ON COLUMN "contracts"."requires_po_number" IS '¿Requiere OC para facturar bajo este contrato?';
+
+COMMENT ON COLUMN "contracts"."created_by" IS 'FK to users table';
+
+COMMENT ON COLUMN "sites"."code_cx" IS 'Código del sitio/casino Sodexo (Profit Center?)';
+
+COMMENT ON COLUMN "sites"."requires_offline_sync" IS '¿Este sitio requiere capacidad offline para consumo?';
+
+COMMENT ON COLUMN "services"."code" IS 'Código interno SVA del servicio';
+
+COMMENT ON COLUMN "services"."sprs_service_code" IS 'Código del servicio en SPRS/ERP para facturación';
+
+COMMENT ON COLUMN "services"."price" IS 'Precio base general del servicio';
+
+COMMENT ON COLUMN "services"."service_type" IS 'DESAYUNO, ALMUERZO, CENA, COLACION, OTRO';
+
+COMMENT ON COLUMN "contract_services"."contract_id" IS 'FK to contracts table';
+
+COMMENT ON COLUMN "contract_services"."service_id" IS 'FK to services table';
+
+COMMENT ON COLUMN "contract_services"."contract_specific_price" IS 'Precio para este servicio BAJO ESTE CONTRATO. Si es NULL, se usa el precio base de la tabla services.';
+
+COMMENT ON COLUMN "contract_services"."is_active_in_contract" IS 'Indica si este servicio está activo para este contrato específico.';
+
+COMMENT ON COLUMN "purchase_authorizations"."status" IS 'PENDING, APPROVED, REJECTED';
+
+COMMENT ON COLUMN "purchase_authorizations"."start_date" IS 'Fecha inicio validez autorización';
+
+COMMENT ON COLUMN "purchase_authorizations"."end_date" IS 'Fecha fin validez autorización';
+
+COMMENT ON COLUMN "purchases"."purchase_code" IS 'Código legible de la compra en SVA';
+
+COMMENT ON COLUMN "purchases"."contractor_id" IS 'FK to companies. ID de la empresa que REALIZA la compra (Contratista o Mandante)';
+
+COMMENT ON COLUMN "purchases"."billed_to_company_id" IS 'FK to companies. ID de la empresa a la que se FACTURA (Siempre un Mandante)';
+
+COMMENT ON COLUMN "purchases"."contract_id" IS 'FK to contracts. Contrato bajo el cual se realiza la compra';
+
+COMMENT ON COLUMN "purchases"."site_id" IS 'FK to sites. Sitio para el cual se compran los tickets';
+
+COMMENT ON COLUMN "purchases"."authorization_id" IS 'FK to purchase_authorizations (si aplica)';
+
+COMMENT ON COLUMN "purchases"."created_by" IS 'FK to users. Usuario que creó la solicitud';
+
+COMMENT ON COLUMN "purchases"."status" IS 'PENDING_APPROVAL, APPROVED, REJECTED, PENDING_PAYMENT, PAID, PARTIALLY_PAID, CANCELLED, SENT_TO_SPRS, SPRS_ERROR';
+
+COMMENT ON COLUMN "purchases"."purchase_type" IS 'CREDIT, CASH';
+
+COMMENT ON COLUMN "purchases"."payment_status" IS 'PENDING, PAID, FAILED, PARTIALLY_PAID';
+
+COMMENT ON COLUMN "purchases"."requires_po_number" IS '¿Esta compra específica requiere OC/HES?';
+
+COMMENT ON COLUMN "purchases"."po_type" IS 'Tipo de documento referencia: OC, HES, Otro';
+
+COMMENT ON COLUMN "purchases"."po_number" IS 'Número de OC/HES si aplica';
+
+COMMENT ON COLUMN "purchases"."po_date" IS 'Fecha del documento de referencia (OC/HES)';
+
+COMMENT ON COLUMN "purchases"."po_document_path" IS 'Ruta al archivo de OC/HES si se adjunta';
+
+COMMENT ON COLUMN "purchases"."description" IS 'Descripción/Título para SPRS';
+
+COMMENT ON COLUMN "purchases"."notes" IS 'Notas/Glosa para SPRS/Factura';
+
+COMMENT ON COLUMN "purchases"."sprs_order_id" IS 'ID del Pedido de Venta generado en SPRS';
+
+COMMENT ON COLUMN "purchases"."billing_address_id" IS 'FK to company_addresses. Dirección específica de facturación si aplica';
+
+COMMENT ON COLUMN "purchase_details"."unit_price" IS 'Precio unitario al momento de la compra (debe ser el precio validado por contrato)';
+
+COMMENT ON COLUMN "tickets"."public_code" IS 'Código visible/usable del ticket';
+
+COMMENT ON COLUMN "tickets"."qr_code_hash" IS 'Hash único asociado al QR para validación rápida';
+
+COMMENT ON COLUMN "tickets"."qr_code_payload" IS 'Contenido real del QR, podría estar encriptado/firmado';
+
+COMMENT ON COLUMN "tickets"."barcode_hash" IS 'Hash del código de barras si se usa';
+
+COMMENT ON COLUMN "tickets"."status" IS 'GENERATED, ACTIVE, CONSUMED, EXPIRED, BLOCKED, REFUNDED, REVALIDATED';
+
+COMMENT ON COLUMN "tickets"."valid_from" IS 'Fecha desde la que es válido consumir';
+
+COMMENT ON COLUMN "tickets"."expiration_date" IS 'Fecha hasta la que es válido consumir';
+
+COMMENT ON COLUMN "tickets"."consumed_by_device_id" IS 'FK to devices';
+
+COMMENT ON COLUMN "tickets"."consumed_at_site_id" IS 'FK to sites, puede diferir de site_id si hay flexibilidad?';
+
+COMMENT ON COLUMN "tickets"."revalidated_from_ticket_id" IS 'FK to tickets.id (original ticket)';
+
+COMMENT ON COLUMN "batches_tickets"."processing_status" IS 'PENDING, PROCESSING, COMPLETED, FAILED';
+
+COMMENT ON COLUMN "invoices"."invoice_number" IS 'Número DTE';
+
+COMMENT ON COLUMN "invoices"."billed_to_company_id" IS 'FK to companies. ID del Mandante facturado';
+
+COMMENT ON COLUMN "invoices"."sii_status" IS 'ISSUED, ACCEPTED, REJECTED, ACCEPTED_WITH_REMARKS, PENDING';
+
+COMMENT ON COLUMN "invoices"."payment_status" IS 'PENDING, PAID, PARTIALLY_PAID, OVERDUE';
+
+COMMENT ON COLUMN "invoices"."payment_method" IS 'TRANSFER, ONLINE_GATEWAY, OTHER';
+
+COMMENT ON COLUMN "invoices"."sprs_invoice_ref" IS 'Referencia de la factura en SPRS si aplica';
+
+COMMENT ON COLUMN "invoices"."erp_invoice_ref" IS 'Referencia de la factura en SAP/AX';
+
+COMMENT ON COLUMN "invoices"."pdf_path" IS 'Ruta al PDF del DTE';
+
+COMMENT ON COLUMN "invoices"."xml_path" IS 'Ruta al XML del DTE';
+
+COMMENT ON COLUMN "ticket_consumptions"."consumption_date" IS 'Timestamp de cuando se leyó/procesó';
+
+COMMENT ON COLUMN "ticket_consumptions"."sync_status" IS 'SYNCED, PENDING_SYNC, FAILED_SYNC';
+
+COMMENT ON COLUMN "ticket_consumptions"."consumption_data" IS 'Datos adicionales capturados offline si es necesario';
+
+COMMENT ON COLUMN "ticket_consumptions"."created_by" IS 'FK to users (Operador del dispositivo)';
+
+COMMENT ON COLUMN "ticket_consumptions"."error_message" IS 'Mensaje si hubo error en sync o validación diferida';
+
+COMMENT ON COLUMN "devices"."code" IS 'Identificador único del dispositivo';
+
+COMMENT ON COLUMN "devices"."type" IS 'TABLET, SMARTPHONE, POS, TURNSTILE, SCANNER';
+
+COMMENT ON COLUMN "devices"."status" IS 'ACTIVE, INACTIVE, MAINTENANCE';
+
+COMMENT ON COLUMN "ticket_revalidation_requests"."status" IS 'PENDING, APPROVED, REJECTED';
+
+COMMENT ON COLUMN "ticket_revalidation_requests"."new_expiration_date" IS 'Solo si se aprueba';
+
+COMMENT ON COLUMN "ticket_revalidation_requests"."new_ticket_id" IS 'FK to tickets (nuevo ticket generado si se aprueba)';
+
+COMMENT ON COLUMN "ticket_refund_requests"."status" IS 'PENDING, APPROVED, REJECTED';
+
+COMMENT ON COLUMN "ticket_refund_requests"."credit_note_id" IS 'FK to credit_notes (si se aprueba y genera NC)';
+
+COMMENT ON COLUMN "credit_notes"."credit_note_number" IS 'Número DTE de la NC';
+
+COMMENT ON COLUMN "credit_notes"."status" IS 'ISSUED, PROCESSED';
+
+COMMENT ON COLUMN "credit_notes"."sii_status" IS 'Estado en el SII';
+
+COMMENT ON COLUMN "credit_notes"."sprs_credit_note_ref" IS 'Referencia de la NC en SPRS';
+
+COMMENT ON COLUMN "credit_notes"."erp_credit_note_ref" IS 'Referencia de la NC en SAP/AX';
+
+COMMENT ON COLUMN "notifications"."recipient_email" IS 'Usar si user_id es null';
+
+COMMENT ON COLUMN "notifications"."type" IS 'EMAIL, IN_APP, SMS';
+
+COMMENT ON COLUMN "notifications"."status" IS 'PENDING, SENT, FAILED, READ';
+
+COMMENT ON COLUMN "payment_transactions"."external_transaction_id" IS 'ID de la transacción en la pasarela';
+
+COMMENT ON COLUMN "payment_transactions"."payment_gateway" IS 'e.g., Webpay, Fintoc, MercadoPago';
+
+COMMENT ON COLUMN "payment_transactions"."status" IS 'PENDING, SUCCESSFUL, FAILED, REJECTED, REFUNDED';
+
+COMMENT ON COLUMN "payment_transactions"."gateway_response" IS 'Respuesta completa de la pasarela';
+
+COMMENT ON COLUMN "registration_documents"."document_type" IS 'RUT_EMPRESA, ESCRITURA_CONSTITUCION, CARPETA_TRIBUTARIA, DICOM, OTRO';
+
+COMMENT ON COLUMN "registration_documents"."status" IS 'PENDING_REVIEW, APPROVED, REJECTED';
+
+COMMENT ON COLUMN "audit_logs"."user_id" IS 'FK to users. Null if action is system-generated';
+
+COMMENT ON COLUMN "audit_logs"."action" IS 'e.g., LOGIN, CREATE_PURCHASE, APPROVE_COMPANY, UPDATE_TICKET_STATUS';
+
+COMMENT ON COLUMN "audit_logs"."entity_type" IS 'e.g., User, Company, Purchase, Ticket, Contract';
+
+COMMENT ON COLUMN "audit_logs"."status" IS 'SUCCESS, FAILURE';
+
+COMMENT ON COLUMN "system_configurations"."key" IS 'e.g., TICKET_DEFAULT_VALIDITY_DAYS, INVOICE_REMINDER_DAYS_BEFORE_DUE';
+
+COMMENT ON COLUMN "system_configurations"."updated_by" IS 'FK to users';
+
+ALTER TABLE "users" ADD FOREIGN KEY ("company_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "users" ADD FOREIGN KEY ("profile_id") REFERENCES "profiles" ("id");
+
+ALTER TABLE "users" ADD FOREIGN KEY ("created_by") REFERENCES "users" ("id");
+
+ALTER TABLE "profile_permissions" ADD FOREIGN KEY ("profile_id") REFERENCES "profiles" ("id");
+
+ALTER TABLE "profile_permissions" ADD FOREIGN KEY ("permission_id") REFERENCES "permissions" ("id");
+
+ALTER TABLE "profiles" ADD FOREIGN KEY ("created_by") REFERENCES "users" ("id");
+
+ALTER TABLE "user_files" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+
+ALTER TABLE "companies" ADD FOREIGN KEY ("mandante_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "companies" ADD FOREIGN KEY ("approved_by") REFERENCES "users" ("id");
+
+ALTER TABLE "company_addresses" ADD FOREIGN KEY ("company_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "contracts" ADD FOREIGN KEY ("mandante_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "contracts" ADD FOREIGN KEY ("created_by") REFERENCES "users" ("id");
+
+ALTER TABLE "contract_services" ADD FOREIGN KEY ("contract_id") REFERENCES "contracts" ("id");
+
+ALTER TABLE "contract_services" ADD FOREIGN KEY ("service_id") REFERENCES "services" ("id");
+
+ALTER TABLE "purchase_authorizations" ADD FOREIGN KEY ("contractor_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "purchase_authorizations" ADD FOREIGN KEY ("site_id") REFERENCES "sites" ("id");
+
+ALTER TABLE "purchase_authorizations" ADD FOREIGN KEY ("contract_id") REFERENCES "contracts" ("id");
+
+ALTER TABLE "purchase_authorizations" ADD FOREIGN KEY ("requested_by") REFERENCES "users" ("id");
+
+ALTER TABLE "purchase_authorizations" ADD FOREIGN KEY ("approved_by") REFERENCES "users" ("id");
+
+ALTER TABLE "purchases" ADD FOREIGN KEY ("contractor_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "purchases" ADD FOREIGN KEY ("billed_to_company_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "purchases" ADD FOREIGN KEY ("contract_id") REFERENCES "contracts" ("id");
+
+ALTER TABLE "purchases" ADD FOREIGN KEY ("site_id") REFERENCES "sites" ("id");
+
+ALTER TABLE "purchases" ADD FOREIGN KEY ("authorization_id") REFERENCES "purchase_authorizations" ("id");
+
+ALTER TABLE "purchases" ADD FOREIGN KEY ("created_by") REFERENCES "users" ("id");
+
+ALTER TABLE "purchases" ADD FOREIGN KEY ("billing_address_id") REFERENCES "company_addresses" ("id");
+
+ALTER TABLE "purchase_details" ADD FOREIGN KEY ("purchase_id") REFERENCES "purchases" ("id");
+
+ALTER TABLE "purchase_details" ADD FOREIGN KEY ("service_id") REFERENCES "services" ("id");
+
+ALTER TABLE "tickets" ADD FOREIGN KEY ("purchase_detail_id") REFERENCES "purchase_details" ("id");
+
+ALTER TABLE "tickets" ADD FOREIGN KEY ("service_id") REFERENCES "services" ("id");
+
+ALTER TABLE "tickets" ADD FOREIGN KEY ("site_id") REFERENCES "sites" ("id");
+
+ALTER TABLE "tickets" ADD FOREIGN KEY ("consumed_by_device_id") REFERENCES "devices" ("id");
+
+ALTER TABLE "tickets" ADD FOREIGN KEY ("consumed_at_site_id") REFERENCES "sites" ("id");
+
+ALTER TABLE "tickets" ADD FOREIGN KEY ("revalidated_from_ticket_id") REFERENCES "tickets" ("id");
+
+ALTER TABLE "batches_tickets" ADD FOREIGN KEY ("uploaded_by") REFERENCES "users" ("id");
+
+ALTER TABLE "batches_tickets" ADD FOREIGN KEY ("service_id") REFERENCES "services" ("id");
+
+ALTER TABLE "batches_tickets" ADD FOREIGN KEY ("site_id") REFERENCES "sites" ("id");
+
+ALTER TABLE "invoices" ADD FOREIGN KEY ("billed_to_company_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "invoices" ADD FOREIGN KEY ("purchase_id") REFERENCES "purchases" ("id");
+
+ALTER TABLE "ticket_consumptions" ADD FOREIGN KEY ("ticket_id") REFERENCES "tickets" ("id");
+
+ALTER TABLE "ticket_consumptions" ADD FOREIGN KEY ("site_id") REFERENCES "sites" ("id");
+
+ALTER TABLE "ticket_consumptions" ADD FOREIGN KEY ("device_id") REFERENCES "devices" ("id");
+
+ALTER TABLE "ticket_consumptions" ADD FOREIGN KEY ("created_by") REFERENCES "users" ("id");
+
+ALTER TABLE "devices" ADD FOREIGN KEY ("site_id") REFERENCES "sites" ("id");
+
+ALTER TABLE "devices" ADD FOREIGN KEY ("registered_by") REFERENCES "users" ("id");
+
+ALTER TABLE "ticket_revalidation_requests" ADD FOREIGN KEY ("ticket_id") REFERENCES "tickets" ("id");
+
+ALTER TABLE "ticket_revalidation_requests" ADD FOREIGN KEY ("requested_by") REFERENCES "users" ("id");
+
+ALTER TABLE "ticket_revalidation_requests" ADD FOREIGN KEY ("approved_by") REFERENCES "users" ("id");
+
+ALTER TABLE "ticket_revalidation_requests" ADD FOREIGN KEY ("new_ticket_id") REFERENCES "tickets" ("id");
+
+ALTER TABLE "ticket_refund_requests" ADD FOREIGN KEY ("ticket_id") REFERENCES "tickets" ("id");
+
+ALTER TABLE "ticket_refund_requests" ADD FOREIGN KEY ("requested_by") REFERENCES "users" ("id");
+
+ALTER TABLE "ticket_refund_requests" ADD FOREIGN KEY ("approved_by") REFERENCES "users" ("id");
+
+ALTER TABLE "ticket_refund_requests" ADD FOREIGN KEY ("credit_note_id") REFERENCES "credit_notes" ("id");
+
+ALTER TABLE "credit_notes" ADD FOREIGN KEY ("invoice_id") REFERENCES "invoices" ("id");
+
+ALTER TABLE "credit_notes" ADD FOREIGN KEY ("billed_to_company_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "notifications" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+
+ALTER TABLE "payment_transactions" ADD FOREIGN KEY ("purchase_id") REFERENCES "purchases" ("id");
+
+ALTER TABLE "registration_documents" ADD FOREIGN KEY ("company_id") REFERENCES "companies" ("id");
+
+ALTER TABLE "registration_documents" ADD FOREIGN KEY ("uploaded_by") REFERENCES "users" ("id");
+
+ALTER TABLE "registration_documents" ADD FOREIGN KEY ("reviewed_by") REFERENCES "users" ("id");
+
+ALTER TABLE "audit_logs" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+
+ALTER TABLE "system_configurations" ADD FOREIGN KEY ("updated_by") REFERENCES "users" ("id");

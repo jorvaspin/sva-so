@@ -1,0 +1,582 @@
+// Usuarios
+Table users {
+  id uuid [pk, default: 'gen_random_uuid()']
+  email varchar(255) [not null, unique]
+  password_hash varchar(255) [not null] // Asegúrate de usar un buen algoritmo de hashing (e.g., bcrypt, Argon2)
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  phone varchar(20)
+  profession varchar(100)
+  user_type varchar(20) [not null, note: 'SODEXO_ADMIN, SODEXO_FINANZAS, SODEXO_OPERACION, MANDANTE_ADMIN, CONTRATISTA_ADMIN, CONTRATISTA_USER']
+  status varchar(20) [not null, default: 'PENDING', note: 'PENDING, ACTIVE, INACTIVE, BLOCKED']
+  company_id uuid [note: 'FK to companies table. Null for Sodexo users']
+  profile_id uuid [note: 'FK to profiles table']
+  code_ad365 varchar(80) [note: 'Object ID from Azure AD/Entra ID']
+  last_login timestamp
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+  created_by uuid [note: 'FK to users table (who created this user)']
+}
+
+// Permisos
+Table permissions {
+  id uuid [pk, default: 'gen_random_uuid()']
+  name varchar(100) [not null, unique, note: 'e.g., create_purchase, approve_company, manage_users']
+  description text
+  module varchar(50) [note: 'Helps group permissions, e.g., Purchases, Companies, Users']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Perfiles (Roles)
+Table profiles {
+  id uuid [pk, default: 'gen_random_uuid()']
+  name varchar(100) [not null, unique, note: 'e.g., Administrador Sodexo Global, Analista Credito, Admin Contratista, Usuario Contratista']
+  description text
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+  created_by uuid [note: 'FK to users table']
+}
+
+// Perfil-Permisos (Junction Table)
+Table profile_permissions {
+  id uuid [pk, default: 'gen_random_uuid()']
+  profile_id uuid [not null, note: 'FK to profiles table']
+  permission_id uuid [not null, note: 'FK to permissions table']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  indexes {
+    (profile_id, permission_id) [unique]
+  }
+}
+
+// Archivos del usuario (Si aplica, e.g., foto perfil)
+Table user_files {
+  id uuid [pk, default: 'gen_random_uuid()']
+  user_id uuid [not null]
+  filename varchar(255) [not null]
+  file_path varchar(255) [not null] // e.g., S3 path
+  mime_type varchar(100) [not null]
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Empresas (Mandantes y Contratistas)
+Table companies {
+  id uuid [pk, default: 'gen_random_uuid()']
+  rut varchar(20) [not null, unique]
+  business_name varchar(255) [not null] // Razón Social
+  address text [not null]
+  city varchar(100) [not null]
+  region varchar(100) [not null]
+  postal_code varchar(20)
+  business_activity varchar(255) // Giro
+  industry varchar(255)
+  email varchar(255) [not null, note: 'Email principal de la empresa']
+  phone varchar(20) [not null]
+  representative_rut varchar(20)
+  representative_name varchar(255)
+  representative_phone varchar(20)
+  company_type varchar(20) [not null, note: 'MANDANTE, CONTRATISTA']
+  mandante_id uuid [note: 'FK to companies.id (Self-reference). NOT NULL if company_type is CONTRATISTA']
+  erp_client_code varchar(50) [note: 'Código de cliente en ERP (SAP/AX)']
+  credit_enabled boolean [not null, default: false, note: 'Indica si tiene crédito DIRECTO (generalmente solo mandantes via contrato)']
+  credit_days integer [default: 0, note: 'Días de crédito directo (si aplica)']
+  credit_status varchar(50) [default: 'PENDING', note: 'PENDING, ACTIVE, BLOCKED, REJECTED'] // Estado de crédito validado externamente
+  blocked boolean [not null, default: false, note: 'Bloqueo operativo dentro de SVA']
+  block_reason text
+  tax_email varchar(255) [note: 'Email para recepción DTE (puede ser diferente al principal)']
+  registration_status varchar(20) [not null, default: 'PENDING', note: 'PENDING, APPROVED, REJECTED'] // Estado de registro en SVA
+  approval_date timestamp
+  approved_by uuid [note: 'FK to users table (Sodexo user who approved)']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Direcciones Alternativas de Facturación (Si una empresa puede tener varias)
+Table company_addresses {
+  id uuid [pk, default: 'gen_random_uuid()']
+  company_id uuid [not null] // FK to companies
+  address text [not null]
+  city varchar(100) [not null]
+  region varchar(100) [not null]
+  postal_code varchar(20)
+  is_default boolean [not null, default: false]
+  description varchar(255)
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Contratos
+Table contracts {
+  id uuid [pk, default: 'gen_random_uuid()']
+  contract_number varchar(50) [unique, note: 'Numero o código identificador del contrato']
+  name varchar(255) [note: 'Nombre descriptivo del contrato']
+  mandante_id uuid [not null, note: 'FK to companies table (company_type MANDANTE)']
+  start_date date
+  end_date date
+  status varchar(20) [not null, default: 'ACTIVE', note: 'DRAFT, ACTIVE, EXPIRED, TERMINATED']
+  payment_terms_days integer [default: 0, note: 'Días de crédito para el Mandante bajo este contrato']
+  requires_po_number boolean [not null, default: false, note: '¿Requiere OC para facturar bajo este contrato?']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+  created_by uuid [note: 'FK to users table']
+}
+
+// Sitios (Locaciones Sodexo / Casinos)
+Table sites {
+  id uuid [pk, default: 'gen_random_uuid()']
+  code_cx varchar(20) [unique, note: 'Código del sitio/casino Sodexo (Profit Center?)'] // CHANGED comment
+  name varchar(255) [not null]
+  address text [not null]
+  city varchar(100) [not null]
+  region varchar(100) [not null]
+  requires_offline_sync boolean [not null, default: false, note: '¿Este sitio requiere capacidad offline para consumo?']
+  active boolean [not null, default: true]
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Servicios (Tipos de Ticket)
+Table services {
+  id uuid [pk, default: 'gen_random_uuid()']
+  code varchar(20) [not null, unique, note: 'Código interno SVA del servicio'] // CHANGED: Assuming unique code overall
+  sprs_service_code varchar(50) [note: 'Código del servicio en SPRS/ERP para facturación']
+  name varchar(255) [not null]
+  description text
+  price decimal(10, 2) [not null, note: 'Precio base general del servicio']
+  service_type varchar(50) [not null, note: 'DESAYUNO, ALMUERZO, CENA, COLACION, OTRO']
+  active boolean [not null, default: true]
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Servicios por Contrato (Vincula qué servicios están disponibles bajo qué contrato y a qué precio) // NEW TABLE
+Table contract_services {
+  id uuid [pk, default: 'gen_random_uuid()']
+  contract_id uuid [not null, note: 'FK to contracts table']
+  service_id uuid [not null, note: 'FK to services table']
+  contract_specific_price decimal(10, 2) [note: 'Precio para este servicio BAJO ESTE CONTRATO. Si es NULL, se usa el precio base de la tabla services.']
+  is_active_in_contract boolean [not null, default: true, note: 'Indica si este servicio está activo para este contrato específico.']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  indexes {
+    (contract_id, service_id) [unique] // Un servicio solo puede estar una vez por contrato
+  }
+}
+
+// Autorizaciones de Compra (Si se mantiene el flujo de autorización previa)
+Table purchase_authorizations {
+  id uuid [pk, default: 'gen_random_uuid()']
+  contractor_id uuid [not null] // FK to companies (quien pide autorización)
+  site_id uuid [not null] // FK to sites (para dónde pide)
+  contract_id uuid [not null] // FK to contracts (bajo qué contrato)
+  requested_by uuid [not null] // FK to users (usuario contratista que solicitó)
+  approved_by uuid // FK to users (usuario Sodexo que aprobó/rechazó)
+  status varchar(20) [not null, default: 'PENDING', note: 'PENDING, APPROVED, REJECTED']
+  start_date date [note: 'Fecha inicio validez autorización']
+  end_date date [note: 'Fecha fin validez autorización']
+  reason varchar(255)
+  notes text
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Compras (Solicitudes de Tickets)
+Table purchases {
+  id uuid [pk, default: 'gen_random_uuid()']
+  purchase_code varchar(20) [not null, unique, note: 'Código legible de la compra en SVA']
+  contractor_id uuid [not null, note: 'FK to companies. ID de la empresa que REALIZA la compra (Contratista o Mandante)']
+  billed_to_company_id uuid [not null, note: 'FK to companies. ID de la empresa a la que se FACTURA (Siempre un Mandante)']
+  contract_id uuid [not null, note: 'FK to contracts. Contrato bajo el cual se realiza la compra']
+  site_id uuid [not null, note: 'FK to sites. Sitio para el cual se compran los tickets']
+  authorization_id uuid [note: 'FK to purchase_authorizations (si aplica)']
+  created_by uuid [not null, note: 'FK to users. Usuario que creó la solicitud']
+  status varchar(20) [not null, default: 'PENDING_APPROVAL', note: 'PENDING_APPROVAL, APPROVED, REJECTED, PENDING_PAYMENT, PAID, PARTIALLY_PAID, CANCELLED, SENT_TO_SPRS, SPRS_ERROR'] // CHANGED: Added SPRS statuses
+  purchase_type varchar(20) [not null, note: 'CREDIT, CASH'] // Relacionado a si la factura es a crédito o contado
+  payment_status varchar(20) [default: 'PENDING', note: 'PENDING, PAID, FAILED, PARTIALLY_PAID'] // Estado del pago asociado (si es Contado)
+  total_amount decimal(12, 2) [not null]
+  purchase_date timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  requires_po_number boolean [not null, default: false, note: '¿Esta compra específica requiere OC/HES?']
+  po_type varchar(20) [note: 'Tipo de documento referencia: OC, HES, Otro'] // NEW FIELD
+  po_number varchar(100) [note: 'Número de OC/HES si aplica']
+  po_date date [note: 'Fecha del documento de referencia (OC/HES)'] // NEW FIELD
+  po_document_path varchar(255) [note: 'Ruta al archivo de OC/HES si se adjunta']
+  description text [note: 'Descripción/Título para SPRS'] // NEW FIELD
+  notes text [note: 'Notas/Glosa para SPRS/Factura'] // NEW FIELD
+  sprs_order_id varchar(100) [note: 'ID del Pedido de Venta generado en SPRS']
+  billing_address_id uuid [note: 'FK to company_addresses. Dirección específica de facturación si aplica']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Detalles de Compra
+Table purchase_details {
+  id uuid [pk, default: 'gen_random_uuid()']
+  purchase_id uuid [not null] // FK to purchases
+  service_id uuid [not null] // FK to services
+  quantity integer [not null]
+  unit_price decimal(10, 2) [not null, note: 'Precio unitario al momento de la compra (debe ser el precio validado por contrato)']
+  subtotal decimal(12, 2) [not null]
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Tickets
+Table tickets {
+  id uuid [pk, default: 'gen_random_uuid()']
+  public_code varchar(50) [not null, unique, note: 'Código visible/usable del ticket']
+  purchase_detail_id uuid [not null] // FK to purchase_details (para saber de qué línea viene)
+  service_id uuid [not null] // FK to services (redundante pero útil para consulta rápida)
+  site_id uuid [not null] // FK to sites (dónde se puede consumir)
+  qr_code_hash varchar(255) [not null, unique, note: 'Hash único asociado al QR para validación rápida']
+  qr_code_payload text [note: 'Contenido real del QR, podría estar encriptado/firmado']
+  barcode_hash varchar(255) [unique, note: 'Hash del código de barras si se usa']
+  barcode_payload text
+  status varchar(20) [not null, default: 'GENERATED', note: 'GENERATED, ACTIVE, CONSUMED, EXPIRED, BLOCKED, REFUNDED, REVALIDATED']
+  issue_date timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  valid_from date [not null, note: 'Fecha desde la que es válido consumir']
+  expiration_date date [not null, note: 'Fecha hasta la que es válido consumir']
+  consumption_date timestamp
+  consumed_by_device_id uuid [note: 'FK to devices']
+  consumed_at_site_id uuid [note: 'FK to sites, puede diferir de site_id si hay flexibilidad?']
+  is_blocked boolean [not null, default: false]
+  blocked_reason text
+  blocked_at timestamp
+  is_revalidated boolean [not null, default: false]
+  revalidated_from_ticket_id uuid [note: 'FK to tickets.id (original ticket)']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Tickets por lotes (Mantener si es necesario para carga masiva/importación)
+Table batches_tickets {
+  id uuid [pk, default: 'gen_random_uuid()']
+  quantity integer [not null]
+  upload_date timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  uploaded_by uuid // FK to users
+  service_id uuid // FK to services
+  site_id uuid // FK to sites
+  processing_status varchar(20) [default: 'PENDING', note: 'PENDING, PROCESSING, COMPLETED, FAILED']
+  processing_details jsonb
+  notes text
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+  file_path varchar(255)
+}
+
+// Facturas
+Table invoices {
+  id uuid [pk, default: 'gen_random_uuid()']
+  invoice_number varchar(50) [not null, unique, note: 'Número DTE']
+  billed_to_company_id uuid [not null, note: 'FK to companies. ID del Mandante facturado']
+  purchase_id uuid [not null] // FK to purchases (o podría ser 1-N si una factura agrupa compras?)
+  issue_date date [not null]
+  due_date date [not null]
+  total_amount decimal(12, 2) [not null]
+  tax_amount decimal(12, 2) [not null]
+  net_amount decimal(12, 2) [not null]
+  sii_status varchar(30) [not null, default: 'ISSUED', note: 'ISSUED, ACCEPTED, REJECTED, ACCEPTED_WITH_REMARKS, PENDING'] // Estado en el SII
+  payment_status varchar(20) [not null, default: 'PENDING', note: 'PENDING, PAID, PARTIALLY_PAID, OVERDUE'] // Estado de pago
+  payment_date date
+  payment_reference varchar(100)
+  payment_method varchar(50) [note: 'TRANSFER, ONLINE_GATEWAY, OTHER']
+  sprs_invoice_ref varchar(100) [note: 'Referencia de la factura en SPRS si aplica']
+  erp_invoice_ref varchar(100) [note: 'Referencia de la factura en SAP/AX']
+  pdf_path varchar(255) [note: 'Ruta al PDF del DTE']
+  xml_path varchar(255) [note: 'Ruta al XML del DTE']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Consumos de Tickets
+Table ticket_consumptions {
+  id uuid [pk, default: 'gen_random_uuid()']
+  ticket_id uuid [not null] // FK to tickets
+  site_id uuid [not null] // FK to sites (donde se consumió)
+  device_id uuid // FK to devices (qué dispositivo lo leyó)
+  consumption_date timestamp [not null, default: 'CURRENT_TIMESTAMP', note: 'Timestamp de cuando se leyó/procesó']
+  sync_status varchar(20) [not null, default: 'SYNCED', note: 'SYNCED, PENDING_SYNC, FAILED_SYNC'] // Para offline
+  sync_date timestamp
+  consumption_data jsonb [note: 'Datos adicionales capturados offline si es necesario']
+  created_by uuid [note: 'FK to users (Operador del dispositivo)']
+  error_message text [note: 'Mensaje si hubo error en sync o validación diferida']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Dispositivos (Lectores QR, Tablets, etc.)
+Table devices {
+  id uuid [pk, default: 'gen_random_uuid()']
+  code varchar(50) [not null, unique, note: 'Identificador único del dispositivo']
+  name varchar(100) [not null]
+  type varchar(20) [not null, note: 'TABLET, SMARTPHONE, POS, TURNSTILE, SCANNER']
+  site_id uuid [not null] // FK to sites (Asociado a qué sitio opera)
+  last_sync timestamp
+  status varchar(20) [not null, default: 'ACTIVE', note: 'ACTIVE, INACTIVE, MAINTENANCE']
+  registered_by uuid // FK to users
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Solicitudes de Revalidación de Tickets
+Table ticket_revalidation_requests {
+  id uuid [pk, default: 'gen_random_uuid()']
+  ticket_id uuid [not null] // FK to tickets (ticket original)
+  requested_by uuid [not null] // FK to users
+  approved_by uuid // FK to users (Sodexo user)
+  status varchar(20) [not null, default: 'PENDING', note: 'PENDING, APPROVED, REJECTED']
+  new_expiration_date date [note: 'Solo si se aprueba']
+  reason text [not null]
+  notes text
+  new_ticket_id uuid [note: 'FK to tickets (nuevo ticket generado si se aprueba)']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Solicitudes de Devolución de Tickets (para Notas de Crédito)
+Table ticket_refund_requests {
+  id uuid [pk, default: 'gen_random_uuid()']
+  ticket_id uuid [not null] // FK to tickets
+  requested_by uuid [not null] // FK to users
+  approved_by uuid // FK to users (Sodexo user)
+  status varchar(20) [not null, default: 'PENDING', note: 'PENDING, APPROVED, REJECTED']
+  reason text [not null]
+  notes text
+  credit_note_id uuid [note: 'FK to credit_notes (si se aprueba y genera NC)']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Notas de Crédito
+Table credit_notes {
+  id uuid [pk, default: 'gen_random_uuid()']
+  credit_note_number varchar(50) [not null, unique, note: 'Número DTE de la NC']
+  invoice_id uuid [not null] // FK to invoices (Factura que anula/corrige)
+  billed_to_company_id uuid [not null] // FK to companies (Mandante al que se emite la NC)
+  issue_date date [not null]
+  total_amount decimal(12, 2) [not null]
+  tax_amount decimal(12, 2) [not null]
+  net_amount decimal(12, 2) [not null]
+  status varchar(20) [not null, default: 'ISSUED', note: 'ISSUED, PROCESSED'] // Estado interno
+  sii_status varchar(30) [note: 'Estado en el SII']
+  sprs_credit_note_ref varchar(100) [note: 'Referencia de la NC en SPRS']
+  erp_credit_note_ref varchar(100) [note: 'Referencia de la NC en SAP/AX']
+  pdf_path varchar(255)
+  xml_path varchar(255)
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  deleted_at timestamp
+}
+
+// Notificaciones
+Table notifications {
+  id uuid [pk, default: 'gen_random_uuid()']
+  user_id uuid // FK to users (Puede ser null si es a un email externo?)
+  recipient_email varchar(255) [note: 'Usar si user_id es null']
+  title varchar(255) [not null]
+  message text [not null]
+  type varchar(50) [not null, note: 'EMAIL, IN_APP, SMS']
+  status varchar(20) [not null, default: 'PENDING', note: 'PENDING, SENT, FAILED, READ']
+  sent_at timestamp
+  read_at timestamp
+  related_entity_type varchar(50) // e.g., 'Invoice', 'Purchase', 'Ticket', 'Company'
+  related_entity_id uuid
+  data jsonb
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+}
+
+// Transacciones de Pago (Para compras Contado)
+Table payment_transactions {
+  id uuid [pk, default: 'gen_random_uuid()']
+  external_transaction_id varchar(100) [not null, unique, note: 'ID de la transacción en la pasarela']
+  purchase_id uuid [not null] // FK to purchases
+  payment_gateway varchar(50) [not null, note: 'e.g., Webpay, Fintoc, MercadoPago']
+  amount decimal(12, 2) [not null]
+  currency varchar(3) [not null, default: 'CLP']
+  status varchar(50) [not null, note: 'PENDING, SUCCESSFUL, FAILED, REJECTED, REFUNDED'] // Estado en la pasarela
+  transaction_date timestamp [not null]
+  description text
+  gateway_response jsonb [note: 'Respuesta completa de la pasarela']
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+}
+
+// Documentos de Registro (Adjuntos al registrar/validar una empresa)
+Table registration_documents {
+  id uuid [pk, default: 'gen_random_uuid()']
+  company_id uuid [not null] // FK to companies
+  document_type varchar(50) [not null, note: 'RUT_EMPRESA, ESCRITURA_CONSTITUCION, CARPETA_TRIBUTARIA, DICOM, OTRO']
+  file_path varchar(255) [not null] // e.g., S3 path
+  uploaded_by uuid [not null] // FK to users
+  status varchar(20) [not null, default: 'PENDING_REVIEW', note: 'PENDING_REVIEW, APPROVED, REJECTED']
+  reviewed_by uuid // FK to users (Sodexo user)
+  review_date timestamp
+  notes text
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+}
+
+// Auditoría
+Table audit_logs {
+  id uuid [pk, default: 'gen_random_uuid()']
+  user_id uuid [note: 'FK to users. Null if action is system-generated']
+  action varchar(100) [not null, note: 'e.g., LOGIN, CREATE_PURCHASE, APPROVE_COMPANY, UPDATE_TICKET_STATUS']
+  entity_type varchar(50) [not null, note: 'e.g., User, Company, Purchase, Ticket, Contract']
+  entity_id uuid
+  old_values jsonb
+  new_values jsonb
+  ip_address varchar(45)
+  user_agent text
+  status varchar(20) [default: 'SUCCESS', note: 'SUCCESS, FAILURE']
+  failure_reason text
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+}
+
+// Configuración del Sistema
+Table system_configurations {
+  id uuid [pk, default: 'gen_random_uuid()']
+  key varchar(100) [not null, unique, note: 'e.g., TICKET_DEFAULT_VALIDITY_DAYS, INVOICE_REMINDER_DAYS_BEFORE_DUE']
+  value text [not null]
+  description text
+  is_editable_by_admin boolean [default: true]
+  created_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updated_by uuid [note: 'FK to users']
+}
+
+
+// --------------------
+// --- Referencias (FKs) ---
+// --------------------
+
+// Users
+Ref: users.company_id > companies.id
+Ref: users.profile_id > profiles.id
+Ref: users.created_by > users.id
+
+// Profile Permissions
+Ref: profile_permissions.profile_id > profiles.id
+Ref: profile_permissions.permission_id > permissions.id
+
+// Profiles
+Ref: profiles.created_by > users.id
+
+// User Files
+Ref: user_files.user_id > users.id
+
+// Companies
+Ref: companies.mandante_id > companies.id // Self-reference
+Ref: companies.approved_by > users.id
+
+// Company Addresses
+Ref: company_addresses.company_id > companies.id
+
+// Contracts
+Ref: contracts.mandante_id > companies.id
+Ref: contracts.created_by > users.id
+
+// Contract Services // NEW Refs
+Ref: contract_services.contract_id > contracts.id
+Ref: contract_services.service_id > services.id
+
+// Purchase Authorizations
+Ref: purchase_authorizations.contractor_id > companies.id
+Ref: purchase_authorizations.site_id > sites.id
+Ref: purchase_authorizations.contract_id > contracts.id
+Ref: purchase_authorizations.requested_by > users.id
+Ref: purchase_authorizations.approved_by > users.id
+
+// Purchases
+Ref: purchases.contractor_id > companies.id
+Ref: purchases.billed_to_company_id > companies.id
+Ref: purchases.contract_id > contracts.id
+Ref: purchases.site_id > sites.id
+Ref: purchases.authorization_id > purchase_authorizations.id
+Ref: purchases.created_by > users.id
+Ref: purchases.billing_address_id > company_addresses.id
+
+// Purchase Details
+Ref: purchase_details.purchase_id > purchases.id
+Ref: purchase_details.service_id > services.id
+
+// Tickets
+Ref: tickets.purchase_detail_id > purchase_details.id
+Ref: tickets.service_id > services.id
+Ref: tickets.site_id > sites.id
+Ref: tickets.consumed_by_device_id > devices.id
+Ref: tickets.consumed_at_site_id > sites.id
+Ref: tickets.revalidated_from_ticket_id > tickets.id
+
+// Batches Tickets
+Ref: batches_tickets.uploaded_by > users.id
+Ref: batches_tickets.service_id > services.id
+Ref: batches_tickets.site_id > sites.id
+
+// Invoices
+Ref: invoices.billed_to_company_id > companies.id
+Ref: invoices.purchase_id > purchases.id
+
+// Ticket Consumptions
+Ref: ticket_consumptions.ticket_id > tickets.id
+Ref: ticket_consumptions.site_id > sites.id
+Ref: ticket_consumptions.device_id > devices.id
+Ref: ticket_consumptions.created_by > users.id
+
+// Devices
+Ref: devices.site_id > sites.id
+Ref: devices.registered_by > users.id
+
+// Ticket Revalidation Requests
+Ref: ticket_revalidation_requests.ticket_id > tickets.id
+Ref: ticket_revalidation_requests.requested_by > users.id
+Ref: ticket_revalidation_requests.approved_by > users.id
+Ref: ticket_revalidation_requests.new_ticket_id > tickets.id
+
+// Ticket Refund Requests
+Ref: ticket_refund_requests.ticket_id > tickets.id
+Ref: ticket_refund_requests.requested_by > users.id
+Ref: ticket_refund_requests.approved_by > users.id
+Ref: ticket_refund_requests.credit_note_id > credit_notes.id
+
+// Credit Notes
+Ref: credit_notes.invoice_id > invoices.id
+Ref: credit_notes.billed_to_company_id > companies.id
+
+// Notifications
+Ref: notifications.user_id > users.id
+// Refs for notifications.related_entity_id depend on related_entity_type and might be better handled in application logic
+
+// Payment Transactions
+Ref: payment_transactions.purchase_id > purchases.id
+
+// Registration Documents
+Ref: registration_documents.company_id > companies.id
+Ref: registration_documents.uploaded_by > users.id
+Ref: registration_documents.reviewed_by > users.id
+
+// Audit Logs
+Ref: audit_logs.user_id > users.id
+// Refs for audit_logs.entity_id depend on entity_type
+
+// System Configurations
+Ref: system_configurations.updated_by > users.id
